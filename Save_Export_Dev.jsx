@@ -1,1 +1,239 @@
-﻿//Script name: Save Document and Extract PDFs//Author: William Dowling//Creation Date: 10/15/15/*	Saves active document to user's desktop in dated folder with order number as filename.	Saves each artboard as a PDF with artboard name as filename.*///updated 27 May, 2016//added a confirmation function to verify correct collars//updated 15 November, 2016//added cross platform support//updated 23 December, 2016//added condition to ignore any artboard named bag tag#target Illustratorfunction container(){	var valid = true;	var scriptName = "save_export";	function getUtilities()	{		var result = [];		var utilPath = "/Volumes/Customization/Library/Scripts/Script_Resources/Data/";		var ext = ".jsxbin"		//check for dev utilities preference file		var devUtilitiesPreferenceFile = File("~/Documents/script_preferences/dev_utilities.txt");		if(devUtilitiesPreferenceFile.exists)		{			devUtilitiesPreferenceFile.open("r");			var prefContents = devUtilitiesPreferenceFile.read();			devUtilitiesPreferenceFile.close();			if(prefContents === "true")			{				utilPath = "~/Desktop/automation/utilities/";				ext = ".js";			}		}		if($.os.match("Windows"))		{			utilPath = utilPath.replace("/Volumes/","//AD4/");		}		result.push(utilPath + "Utilities_Container" + ext);		result.push(utilPath + "Batch_Framework" + ext);		if(!result.length)		{			valid = false;			alert("Failed to find the utilities.");		}		return result;	}	var utilities = getUtilities();	for(var u=0,len=utilities.length;u<len;u++)	{		eval("#include \"" + utilities[u] + "\"");		}	if(!valid)return;		var docRef = app.activeDocument;	var layers = docRef.layers;	var aB = docRef.artboards;	var date = getDate();	var dest = findDest();	//prompt user to confirm they have checked	//for USA Collars	function confirmCollars()	{		var bool = confirm("STOP!!!\nHave you checked the collars?\nIf you're not 100% positive the collars say 'Made in DR' hit cancel and check!");		return bool;	}	var collarsChecked = confirmCollars();	if(!collarsChecked)		return;		function findDest(){				// if($.os.match('Windows')){		// 	//PC		// 	var user = $.getenv("USERNAME");		// 	var dest = new Folder("C:\\Users\\" + user + "\\Desktop\\Today's Orders " + date);		// 	return dest.fsName;					// } else {		// 	// MAC		// 	var user = $.getenv("USER");		// 	var dest = new Folder("/Volumes/Macintosh HD/Users/" + user + "/Desktop" + "/Today's Orders " + date);		// 	// var dest = new Folder("~/Desktop/Today's Orders " + date);		// 	return dest.fsName;		// }		return Folder(desktopPath + "Today's Orders " + date).fullName;	}		function getDate(){			var today = new Date();			var dd = today.getDate();			var mm = today.getMonth()+1; //January is 0!			var yyyy = today.getYear();			var yy = yyyy-100;			if(dd<10) {				dd='0'+dd			} 			if(mm<10) {				mm='0'+mm			} 			return mm+'.'+dd+'.'+yy;		}		// dest = "/Volumes/Macintosh HD" + dest + " " + date;	if(!dest.exists){		var newFolder = new Folder(dest);		newFolder.create();	}	if(docRef.name.substring(0,2) == "Un"){		var oN = prompt("Enter Order Number", "1234567");		var fileName = oN;	}	else{		var fileName = docRef.name;	}	var saveFile = new File(dest + "/" + fileName);	if(saveFile.exists){		if(!confirm("This File already exists.. Do you want to overwrite?", false, "Overwrite file?")){			return;		}	}	docRef.saveAs(saveFile);	if(fileName.indexOf(".ai")==-1){		var pdfdest = dest + "/" + fileName + "_PDFs";	}	else{		var pdfdest = dest + "/" + fileName.substring(0,fileName.indexOf(".ai")) + "_PDFs";	}	var pdfFolder = new Folder(pdfdest);	if(!pdfFolder.exists){		pdfFolder.create();	}	else if(pdfFolder.exists){		var removeFiles = pdfFolder.getFiles();		for(var a=0;a<removeFiles.length;a++){			removeFiles[a].remove();		}		pdfFolder.remove();		pdfFolder = new Folder(pdfdest);		pdfFolder.create();//         alert("The PDFs folder for this order already exists.. Please Delete the folder and try again");//         return;			}		//loop artboards to save individual PDFs		var pdfSaveOpts = new PDFSaveOptions();	pdfSaveOpts.preserveEditability = false;	pdfSaveOpts.viewAfterSaving = false;	pdfSaveOpts.compressArt = true;	pdfSaveOpts.optimization = true;//     pdfSaveOpts.preset = "[Smallest File Size]";	var seq = 1;	for(var a=0;a<aB.length;a++){		if(aB[a].name.toLowerCase().indexOf("bag tag")>-1)		{			continue;		}		var range = (a+1).toString();		pdfSaveOpts.artboardRange = range;		var pdfFile = new File(pdfdest + "/" + aB[a].name);		var thisPDF = new File(pdfFile + ".pdf");		if(thisPDF.exists){			thisPDF = new File(pdfFile + " " + seq.toString());			docRef.saveAs(thisPDF, pdfSaveOpts);			seq++;		}		else{			docRef.saveAs(pdfFile, pdfSaveOpts);		}	}}container();
+﻿//Script name: Save Document and Extract PDFs
+//Author: William Dowling
+//Creation Date: 10/15/15
+/*
+	Saves active document to user's desktop in dated folder with order number as filename.
+	Saves each artboard as a PDF with artboard name as filename.
+*/
+
+//updated 27 May, 2016
+//added a confirmation function to verify correct collars
+
+//updated 15 November, 2016
+//added cross platform support
+
+//updated 23 December, 2016
+//added condition to ignore any artboard named bag tag
+
+#target Illustrator
+function container()
+{
+
+	var valid = true;
+	var scriptName = "save_export";
+
+	function getUtilities()
+	{
+		var result = [];
+		var utilPath = "/Volumes/Customization/Library/Scripts/Script_Resources/Data/";
+		var ext = ".jsxbin"
+
+		//check for dev utilities preference file
+		var devUtilitiesPreferenceFile = File("~/Documents/script_preferences/dev_utilities.txt");
+
+		if (devUtilitiesPreferenceFile.exists)
+		{
+			devUtilitiesPreferenceFile.open("r");
+			var prefContents = devUtilitiesPreferenceFile.read();
+			devUtilitiesPreferenceFile.close();
+			if (prefContents === "true")
+			{
+				utilPath = "~/Desktop/automation/utilities/";
+				ext = ".js";
+			}
+		}
+
+		if ($.os.match("Windows"))
+		{
+			utilPath = utilPath.replace("/Volumes/", "//AD4/");
+		}
+
+		result.push(utilPath + "Utilities_Container" + ext);
+		result.push(utilPath + "Batch_Framework" + ext);
+
+		if (!result.length)
+		{
+			valid = false;
+			alert("Failed to find the utilities.");
+		}
+		return result;
+
+	}
+
+	var utilities = getUtilities();
+	for (var u = 0, len = utilities.length; u < len; u++)
+	{
+		eval("#include \"" + utilities[u] + "\"");
+	}
+
+	if (!valid) return;
+
+	logDest.push(getLogDest());
+
+
+
+	var docRef = app.activeDocument;
+	var layers = docRef.layers;
+	var aB = docRef.artboards;
+	var date = getDate();
+	log.l("date = " + date);
+
+	var destString = "";
+	var dest = findDest();
+	log.l("dest = " + dest);
+
+	//prompt user to confirm they have checked
+	//for USA Collars
+
+	function confirmCollars()
+	{
+		var bool = confirm("STOP!!!\nHave you checked the collars?\nIf you're not 100% positive the collars say 'Made in DR' hit cancel and check!");
+		return bool;
+	}
+
+	var collarsChecked = confirmCollars();
+	if (!collarsChecked)
+		return;
+
+	function findDest()
+	{
+
+
+
+		// if($.os.match('Windows')){
+		// 	//PC
+		// 	var user = $.getenv("USERNAME");
+		// 	var dest = new Folder("C:\\Users\\" + user + "\\Desktop\\Today's Orders " + date);
+		// 	return dest.fsName;
+
+		// } else {
+		// 	// MAC
+		// 	var user = $.getenv("USER");
+		// 	var dest = new Folder("/Volumes/Macintosh HD/Users/" + user + "/Desktop" + "/Today's Orders " + date);
+		// 	// var dest = new Folder("~/Desktop/Today's Orders " + date);
+		// 	return dest.fsName;
+		// }
+		destString = desktopPath + "Today's Orders " + date;
+		return Folder(destString);
+	}
+
+	function getDate()
+	{
+		var today = new Date();
+		var dd = today.getDate();
+		var mm = today.getMonth() + 1; //January is 0!
+		var yyyy = today.getYear();
+		var yy = yyyy - 100;
+
+		if (dd < 10)
+		{
+			dd = '0' + dd
+		}
+		if (mm < 10)
+		{
+			mm = '0' + mm
+		}
+		return mm + '.' + dd + '.' + yy;
+	}
+
+
+
+	// dest = "/Volumes/Macintosh HD" + dest + " " + date;
+	if (!dest.exists)
+	{
+		log.l("dest does not exist. creating new dest folder at ")
+		var newFolder = new Folder(destString);
+		newFolder.create();
+	}
+	if (docRef.name.substring(0, 2) == "Un")
+	{
+		log.l("document is untitled. prompting user for order number.");
+		var oN = prompt("Enter Order Number", "1234567");
+		log.l("user entered " + oN);
+		var fileName = oN;
+	}
+	else
+	{
+		var fileName = docRef.name;
+	}
+
+	log.l("setting fileName to " + fileName);
+
+	var saveFile = new File(destString + "/" + fileName);
+	log.l("saveFile.name = " + destString + "/" + fileName);
+
+	if (saveFile.exists)
+	{
+		log.l("saveFile already exists. prompting for overwrite.");
+		if (!confirm("This File already exists.. Do you want to overwrite?", false, "Overwrite file?"))
+		{
+			log.l("::::user chose not to overwrite. exiting script.");
+			return;
+		}
+		log.l("user chose to overwrite file.");
+	}
+	docRef.saveAs(saveFile);
+	if (fileName.indexOf(".ai") == -1)
+	{
+		var pdfdest = destString + "/" + fileName + "_PDFs";
+	}
+	else
+	{
+		var pdfdest = destString + "/" + fileName.substring(0, fileName.indexOf(".ai")) + "_PDFs";
+	}
+	var pdfFolder = new Folder(pdfdest);
+	log.l("pdfFolder = " + pdfFolder);
+	if (!pdfFolder.exists)
+	{
+		log.l("creating pdf folder");
+		pdfFolder.create();
+		log.l("after creating folder: pdfFolder.exists = " + pdfFolder.exists);
+	}
+	else if (pdfFolder.exists)
+	{
+		var removeFiles = pdfFolder.getFiles();
+		for (var a = 0; a < removeFiles.length; a++)
+		{
+			removeFiles[a].remove();
+		}
+		pdfFolder.remove();
+		pdfFolder = new Folder(pdfdest);
+		pdfFolder.create();
+
+
+	}
+
+	//loop artboards to save individual PDFs
+
+	var pdfSaveOpts = new PDFSaveOptions();
+	pdfSaveOpts.preserveEditability = false;
+	pdfSaveOpts.viewAfterSaving = false;
+	pdfSaveOpts.compressArt = true;
+	pdfSaveOpts.optimization = true;
+	//     pdfSaveOpts.preset = "[Smallest File Size]";
+	var seq = 1;
+
+	for (var a = 0; a < aB.length; a++)
+	{
+		if (aB[a].name.toLowerCase().indexOf("bag tag") > -1)
+		{
+			continue;
+		}
+		var range = (a + 1).toString();
+		pdfSaveOpts.artboardRange = range;
+		var pdfFileName = pdfdest + "/" + aB[a].name;
+		var ext = ".pdf";
+		var thisPDF = new File(pdfFileName + ext);
+		log.l("attempting to save: " + pdfFileName);
+		if (thisPDF.exists)
+		{
+			log.l(aB[a].name + " is a duplicate of an existing pdf. Adding the sequence number: " + seq);
+			thisPDF = new File(pdfFileName + " " + seq + ext);
+			seq++;
+		}
+		docRef.saveAs(thisPDF, pdfSaveOpts);
+	}
+
+	printLog();
+}
+container();
