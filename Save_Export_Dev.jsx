@@ -22,51 +22,51 @@ function container()
 	var valid = true;
 	var scriptName = "save_export";
 
-	function getUtilities()
+	function getUtilities ()
 	{
-		var result = [];
-		var utilPath = "/Volumes/Customization/Library/Scripts/Script_Resources/Data/";
-		var ext = ".jsxbin"
-
-		//check for dev utilities preference file
-		var devUtilitiesPreferenceFile = File("~/Documents/script_preferences/dev_utilities.txt");
-
-		if (devUtilitiesPreferenceFile.exists)
+		var utilNames = [ "Utilities_Container" ]; //array of util names
+		var utilFiles = []; //array of util files
+		//check for dev mode
+		var devUtilitiesPreferenceFile = File( "~/Documents/script_preferences/dev_utilities.txt" );
+		function readDevPref ( dp ) { dp.open( "r" ); var contents = dp.read() || ""; dp.close(); return contents; }
+		if ( devUtilitiesPreferenceFile.exists && readDevPref( devUtilitiesPreferenceFile ).match( /true/i ) )
 		{
-			devUtilitiesPreferenceFile.open("r");
-			var prefContents = devUtilitiesPreferenceFile.read();
-			devUtilitiesPreferenceFile.close();
-			if (prefContents === "true")
+			$.writeln( "///////\n////////\nUsing dev utilities\n///////\n////////" );
+			var devUtilPath = "~/Desktop/automation/utilities/";
+			utilFiles =[ devUtilPath + "Utilities_Container.js", devUtilPath + "Batch_Framework.js" ];
+			return utilFiles;
+		}
+
+		var dataResourcePath = customizationPath + "Library/Scripts/Script_Resources/Data/";
+		
+		for(var u=0;u<utilNames.length;u++)
+		{
+			var utilFile = new File(dataResourcePath + utilNames[u] + ".jsxbin");
+			if(utilFile.exists)
 			{
-				utilPath = "~/Desktop/automation/utilities/";
-				ext = ".js";
+				utilFiles.push(utilFile);	
 			}
+			
 		}
 
-		if ($.os.match("Windows"))
+		if(!utilFiles.length)
 		{
-			utilPath = utilPath.replace("/Volumes/", "//AD4/");
+			alert("Could not find utilities. Please ensure you're connected to the appropriate Customization drive.");
+			return [];
 		}
 
-		result.push(utilPath + "Utilities_Container" + ext);
-		result.push(utilPath + "Batch_Framework" + ext);
-
-		if (!result.length)
-		{
-			valid = false;
-			alert("Failed to find the utilities.");
-		}
-		return result;
+		
+		return utilFiles;
 
 	}
-
 	var utilities = getUtilities();
-	for (var u = 0, len = utilities.length; u < len; u++)
+
+	for ( var u = 0, len = utilities.length; u < len && valid; u++ )
 	{
-		eval("#include \"" + utilities[u] + "\"");
+		eval( "#include \"" + utilities[ u ] + "\"" );
 	}
 
-	if (!valid) return;
+	if ( !valid || !utilities.length) return;
 
 	logDest.push(getLogDest());
 
